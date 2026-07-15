@@ -2,44 +2,46 @@ package com.study.hello;
 
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@Service   // Day1: 스프링이 이걸 빈으로 관리
+@Service
 public class TodoService {
 
-    private final List<Todo> todos = new ArrayList<>();
-    private Long nextId = 1L;
+    private final TodoRepository todoRepository;
+
+    // Day1: 생성자 주입 — 스프링이 구현체를 넣어줌
+    public TodoService(TodoRepository todoRepository) {
+        this.todoRepository = todoRepository;
+    }
 
     public List<Todo> findAll() {
-        return todos;
+        return todoRepository.findAll();
     }
 
     public Optional<Todo> findById(Long id) {
-        return todos.stream()
-                .filter(t -> t.id().equals(id))
-                .findFirst();
+        return todoRepository.findById(id);
     }
 
     public Todo create(String title) {
-        Todo newTodo = new Todo(nextId++, title, false);
-        todos.add(newTodo);
-        return newTodo;
+        Todo newTodo = new Todo(title, false);
+        return todoRepository.save(newTodo);   // 저장하면 id가 채워져서 돌아옴
     }
 
     public Optional<Todo> update(Long id, String title, boolean done) {
-        for (int i = 0; i < todos.size(); i++) {
-            if (todos.get(i).id().equals(id)) {
-                Todo updated = new Todo(id, title, done);
-                todos.set(i, updated);
-                return Optional.of(updated);
-            }
-        }
-        return Optional.empty();   // 없으면 빈 Optional
+        return todoRepository.findById(id)
+                .map(todo -> {
+                    todo.setTitle(title);
+                    todo.setDone(done);
+                    return todoRepository.save(todo);
+                });
     }
 
     public boolean delete(Long id) {
-        return todos.removeIf(t -> t.id().equals(id));
+        if (!todoRepository.existsById(id)) {
+            return false;
+        }
+        todoRepository.deleteById(id);
+        return true;
     }
 }
